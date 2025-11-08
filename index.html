@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>自律星球 · Android 安装包下载</title>
+  <meta name="description" content="自律星球（Fitness Tracker App）— 基于 AI 的健身计划与打卡助手。下载 Android APK 安装包。" />
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #101729;
+      --text: #e7ecf5;
+      --muted: #9fb0c6;
+      --primary: #31c48d;
+      --primary-press: #22a06f;
+      --border: #1e2a44;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; background: linear-gradient(160deg, #0b1020 0%, #0f1b34 100%); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", Arial, sans-serif; }
+    a { color: inherit; text-decoration: none; }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 24px; }
+    .card {
+      background: radial-gradient(1200px 600px at 90% -10%, rgba(49,196,141,.08), transparent 60%),
+                  radial-gradient(800px 400px at -10% 20%, rgba(79,70,229,.08), transparent 60%),
+                  var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 20px 50px rgba(0,0,0,.35);
+    }
+    header { display:flex; align-items:center; gap:14px; margin-bottom: 14px; }
+    .logo {
+      width:40px;height:40px;border-radius:12px;
+      background: linear-gradient(135deg, #34d399, #22d3ee);
+      box-shadow: inset 0 0 16px rgba(255,255,255,.25);
+    }
+    h1 { font-size: 22px; margin:0; letter-spacing: .5px; }
+    .sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
+    .hero {
+      display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; margin: 18px 0 8px;
+    }
+    .btn {
+      display:inline-flex; align-items:center; justify-content:center; gap:10px;
+      padding: 14px 18px; border-radius: 14px; font-weight: 600; letter-spacing:.2px;
+      background: var(--primary); color:#062416; border: 1px solid rgba(255,255,255,.06);
+      transition: transform .06s ease, background .12s ease;
+    }
+    .btn:active { transform: translateY(1px); background: var(--primary-press); }
+    .ghost {
+      background: transparent; color: var(--text); border:1px dashed var(--border);
+    }
+    .meta {
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center; color: var(--muted); font-size: 13px;
+    }
+    .pill {
+      border:1px solid var(--border); border-radius:999px; padding:4px 10px; background: rgba(255,255,255,.03);
+    }
+    .warn {
+      margin-top: 10px; font-size: 13px; color: #ffd7a6;
+    }
+    .section { margin-top: 22px; }
+    h2 { font-size: 16px; margin: 0 0 10px; color:#dbe7ff; }
+    .code {
+      background: #0a1326; border:1px solid var(--border); border-radius: 12px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 12px; color:#eaf2ff;
+      display:flex; justify-content:space-between; align-items:center; gap:12px; overflow:auto;
+    }
+    .copy { cursor:pointer; user-select:none; font-size: 12px; color:#9fd6ff; padding:6px 10px; border:1px solid var(--border); border-radius:8px; }
+    .changelog { border:1px solid var(--border); border-radius: 16px; padding: 14px; background: rgba(255,255,255,.02); }
+    .changelog .item { border-top:1px dashed var(--border); padding-top:10px; margin-top:10px; }
+    .changelog .item:first-child { border-top:0; padding-top:0; margin-top:0; }
+    footer { margin: 24px 0 8px; text-align:center; color: var(--muted); font-size: 12px;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <header>
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>自律星球（Fitness Tracker App）</h1>
+          <div class="sub">基于 AI 的健身计划与打卡助手 · Android APK 下载</div>
+        </div>
+      </header>
+
+      <div class="hero">
+        <div class="meta">
+          <span class="pill">版本：<b id="ver">v1.0.0</b></span>
+          <span class="pill">发布日期：<b id="pub">—</b></span>
+          <span class="pill">文件：<b>app-release.apk</b></span>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <!-- 直链 APK：如改新版本，只需修改 APK_HREF 与 RELEASE_TAG -->
+          <a id="dl" class="btn" href="https://github.com/unknownparticles/fitness_tracker_app/releases/download/v1.0.0/app-release.apk" rel="noopener" download>
+            📥 立即下载 APK
+          </a>
+          <!-- 备用：跳转到 Release 页面 -->
+          <a class="btn ghost" href="https://github.com/unknownparticles/fitness_tracker_app/releases/tag/v1.0.0" target="_blank" rel="noopener">
+            🧾 查看 Release
+          </a>
+        </div>
+      </div>
+
+      <div id="iosWarn" class="warn" style="display:none;">检测到 iOS 设备：本应用为 Android APK，无法直接安装。</div>
+
+      <div class="section">
+        <h2>🔐 校验值（SHA-256）</h2>
+        <div class="code">
+          <span id="sha">a5e034569b03e41eeb649fa34f4db75f76cafeb08d75ef19f193df2f275c311c</span>
+          <button class="copy" id="copyBtn" aria-label="复制 SHA256">复制</button>
+        </div>
+        <div class="sub" style="margin-top:8px;">如下载后安装失败或被拦截，请比对校验值是否一致。</div>
+      </div>
+
+      <div class="section">
+        <h2>📝 版本说明</h2>
+        <div id="notes" class="changelog">
+          <div class="item">正在读取 GitHub Release 说明…</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      © <span id="y"></span> 自律星球 · 仅供学习体验使用
+    </footer>
+  </div>
+
+  <script>
+    // ===== 配置区：如发新版，仅需改这里 =====
+    const OWNER = "unknownparticles";
+    const REPO = "fitness_tracker_app";
+    const RELEASE_TAG = "v1.0.0";
+    const APK_HREF = "https://github.com/unknownparticles/fitness_tracker_app/releases/download/v1.0.0/app-release.apk";
+    const FALLBACK_URL = `https://github.com/${OWNER}/${REPO}/releases/tag/${RELEASE_TAG}`;
+    // 已知 SHA256（来自你的 Release 页面）
+    const KNOWN_SHA256 = "a5e034569b03e41eeb649fa34f4db75f76cafeb08d75ef19f193df2f275c311c";
+
+    // UI 赋值
+    document.getElementById("y").textContent = new Date().getFullYear();
+    document.getElementById("sha").textContent = KNOWN_SHA256;
+    document.getElementById("dl").href = APK_HREF;
+    document.getElementById("ver").textContent = RELEASE_TAG;
+
+    // iOS 设备提示
+    (function(){
+      const ua = navigator.userAgent || "";
+      const isIOS = /iPhone|iPad|iPod/i.test(ua);
+      if (isIOS) document.getElementById("iosWarn").style.display = "block";
+    })();
+
+    // 复制 SHA256
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(KNOWN_SHA256);
+        const btn = document.getElementById("copyBtn");
+        btn.textContent = "已复制 ✓";
+        setTimeout(() => (btn.textContent = "复制"), 1600);
+      } catch (_) {}
+    });
+
+    // 拉取 GitHub Release 详情（说明、发布时间、下载次数等）
+    async function loadReleaseNotes() {
+      const target = document.getElementById("notes");
+      const pub = document.getElementById("pub");
+      try {
+        const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/releases/tags/${RELEASE_TAG}`);
+        if (!res.ok) throw new Error("api fail");
+        const data = await res.json();
+        // 发布时间
+        if (data.published_at) {
+          const d = new Date(data.published_at);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth()+1).padStart(2,"0");
+          const dd = String(d.getDate()).padStart(2,"0");
+          pub.textContent = `${yyyy}-${mm}-${dd}`;
+        } else {
+          pub.textContent = "—";
+        }
+        // 说明（支持 Markdown 的最简换行）
+        const body = (data.body || "").trim();
+        const html = body
+          ? body
+              .split(/\n{2,}/)
+              .map(p => `<div class="item">${p.replace(/\n/g,"<br>")}</div>`)
+              .join("")
+          : `<div class="item">暂无说明。可前往 <a href="${FALLBACK_URL}" target="_blank" rel="noopener">Release 页面</a> 查看详情。</div>`;
+        target.innerHTML = html;
+
+        // 若存在资产，顺带更新主按钮链接（以防文件名变更）
+        if (Array.isArray(data.assets) && data.assets.length) {
+          const apk = data.assets.find(a => /(\.apk)$/i.test(a.name));
+          if (apk && apk.browser_download_url) {
+            document.getElementById("dl").href = apk.browser_download_url;
+          }
+        }
+      } catch (e) {
+        target.innerHTML = `<div class="item">无法读取 Release 信息。请前往 <a href="${FALLBACK_URL}" target="_blank" rel="noopener">GitHub Release</a> 查看。</div>`;
+        pub.textContent = "—";
+      }
+    }
+    loadReleaseNotes();
+  </script>
+</body>
+</html>
