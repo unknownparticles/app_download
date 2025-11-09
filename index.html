@@ -84,18 +84,16 @@
 
       <div class="hero">
         <div class="meta">
-          <span class="pill">版本：<b id="ver">v1.0.0</b></span>
+          <span class="pill">版本：<b id="ver">加载中…</b></span>
           <span class="pill">发布日期：<b id="pub">—</b></span>
-          <span class="pill">文件：<b>app-release.apk</b></span>
+          <span class="pill">文件：<b id="fname">app-release.apk</b></span>
         </div>
 
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <!-- 直链 APK：如改新版本，只需修改 APK_HREF 与 RELEASE_TAG -->
-          <a id="dl" class="btn" href="https://github.com/unknownparticles/fitness_tracker_app/releases/download/v1.0.0/app-release.apk" rel="noopener" download>
+          <a id="dl" class="btn" href="#" rel="noopener" download>
             📥 立即下载 APK
           </a>
-          <!-- 备用：跳转到 Release 页面 -->
-          <a class="btn ghost" href="https://github.com/unknownparticles/fitness_tracker_app/releases/tag/v1.0.0" target="_blank" rel="noopener">
+          <a id="rel" class="btn ghost" href="#" target="_blank" rel="noopener">
             🧾 查看 Release
           </a>
         </div>
@@ -106,7 +104,7 @@
       <div class="section">
         <h2>🔐 校验值（SHA-256）</h2>
         <div class="code">
-          <span id="sha">a5e034569b03e41eeb649fa34f4db75f76cafeb08d75ef19f193df2f275c311c</span>
+          <span id="sha">尚未提供</span>
           <button class="copy" id="copyBtn" aria-label="复制 SHA256">复制</button>
         </div>
         <div class="sub" style="margin-top:8px;">如下载后安装失败或被拦截，请比对校验值是否一致。</div>
@@ -115,7 +113,7 @@
       <div class="section">
         <h2>📝 版本说明</h2>
         <div id="notes" class="changelog">
-          <div class="item">正在读取 GitHub Release 说明…</div>
+          <div class="item">正在读取 GitHub Release 信息…</div>
         </div>
       </div>
     </div>
@@ -126,79 +124,130 @@
   </div>
 
   <script>
-    // ===== 配置区：如发新版，仅需改这里 =====
+    // ========= 基本配置 =========
     const OWNER = "unknownparticles";
     const REPO = "fitness_tracker_app";
-    const RELEASE_TAG = "v1.0.0";
-    const APK_HREF = "https://github.com/unknownparticles/fitness_tracker_app/releases/download/v1.0.0/app-release.apk";
-    const FALLBACK_URL = `https://github.com/${OWNER}/${REPO}/releases/tag/${RELEASE_TAG}`;
-    // 已知 SHA256（来自你的 Release 页面）
-    const KNOWN_SHA256 = "a5e034569b03e41eeb649fa34f4db75f76cafeb08d75ef19f193df2f275c311c";
 
-    // UI 赋值
-    document.getElementById("y").textContent = new Date().getFullYear();
-    document.getElementById("sha").textContent = KNOWN_SHA256;
-    document.getElementById("dl").href = APK_HREF;
-    document.getElementById("ver").textContent = RELEASE_TAG;
+    // 支持通过 URL 强制指定 tag，如：?tag=v1.0.1
+    const params = new URLSearchParams(location.search);
+    const FORCE_TAG = params.get("tag");
 
-    // iOS 设备提示
+    // iOS 提示
     (function(){
       const ua = navigator.userAgent || "";
       const isIOS = /iPhone|iPad|iPod/i.test(ua);
       if (isIOS) document.getElementById("iosWarn").style.display = "block";
     })();
 
+    // 年份
+    document.getElementById("y").textContent = new Date().getFullYear();
+
     // 复制 SHA256
     document.getElementById("copyBtn").addEventListener("click", async () => {
+      const shaText = document.getElementById("sha").textContent.trim();
+      if (!shaText || shaText === "尚未提供") return;
       try {
-        await navigator.clipboard.writeText(KNOWN_SHA256);
+        await navigator.clipboard.writeText(shaText);
         const btn = document.getElementById("copyBtn");
         btn.textContent = "已复制 ✓";
         setTimeout(() => (btn.textContent = "复制"), 1600);
       } catch (_) {}
     });
 
-    // 拉取 GitHub Release 详情（说明、发布时间、下载次数等）
-    async function loadReleaseNotes() {
-      const target = document.getElementById("notes");
-      const pub = document.getElementById("pub");
+    // 解析 Release body 中的 sha256: xxxxx
+    function extractSHA(body) {
+      if (!body) return null;
+      const m = body.match(/sha256\s*:\s*([a-f0-9]{64})/i);
+      return m ? m[1] : null;
+    }
+
+    // 优先选择 app-release.apk；否则选择第一个 .apk
+    function pickApk(assets) {
+      if (!Array.isArray(assets)) return null;
+      const exact = assets.find(a => a && a.name && a.name.toLowerCase() === "app-release.apk" && /\.apk$/i.test(a.name));
+      if (exact) return exact;
+      return assets.find(a => a && a.name && /\.apk$/i.test(a.name)) || null;
+    }
+
+    async function fetchJson(url) {
+      const res = await fetch(url + (url.includes("?") ? "&" : "?") + "t=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    }
+
+    async function loadRelease() {
+      const verEl = document.getElementById("ver");
+      const pubEl = document.getElementById("pub");
+      const dlBtn = document.getElementById("dl");
+      const relBtn = document.getElementById("rel");
+      const notes = document.getElementById("notes");
+      const shaEl = document.getElementById("sha");
+      const fnameEl = document.getElementById("fname");
+
       try {
-        const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/releases/tags/${RELEASE_TAG}`);
-        if (!res.ok) throw new Error("api fail");
-        const data = await res.json();
-        // 发布时间
+        let data;
+        if (FORCE_TAG) {
+          // 指定 tag
+          data = await fetchJson(`https://api.github.com/repos/${OWNER}/${REPO}/releases/tags/${encodeURIComponent(FORCE_TAG)}`);
+        } else {
+          // 最新稳定版（非 draft/prerelease）
+          data = await fetchJson(`https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`);
+        }
+
+        // 版本号
+        verEl.textContent = data.tag_name || "—";
+
+        // 发布日期
         if (data.published_at) {
           const d = new Date(data.published_at);
-          const yyyy = d.getFullYear();
-          const mm = String(d.getMonth()+1).padStart(2,"0");
-          const dd = String(d.getDate()).padStart(2,"0");
-          pub.textContent = `${yyyy}-${mm}-${dd}`;
+          pubEl.textContent = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
         } else {
-          pub.textContent = "—";
+          pubEl.textContent = "—";
         }
-        // 说明（支持 Markdown 的最简换行）
+
+        // 资产选择
+        const apk = pickApk(data.assets || []);
+        if (apk && apk.browser_download_url) {
+          dlBtn.href = apk.browser_download_url;
+          fnameEl.textContent = apk.name || "app-release.apk";
+        } else {
+          // 没找到 apk，回退到 release 页面
+          dlBtn.href = data.html_url;
+          dlBtn.textContent = "前往 Release 下载";
+          fnameEl.textContent = "—";
+        }
+
+        // Release 页面链接
+        relBtn.href = data.html_url || `https://github.com/${OWNER}/${REPO}/releases`;
+
+        // 说明
         const body = (data.body || "").trim();
         const html = body
-          ? body
-              .split(/\n{2,}/)
-              .map(p => `<div class="item">${p.replace(/\n/g,"<br>")}</div>`)
-              .join("")
-          : `<div class="item">暂无说明。可前往 <a href="${FALLBACK_URL}" target="_blank" rel="noopener">Release 页面</a> 查看详情。</div>`;
-        target.innerHTML = html;
+          ? body.split(/\n{2,}/).map(p => `<div class="item">${p.replace(/\n/g,"<br>")}</div>`).join("")
+          : `<div class="item">暂无说明。可前往 <a href="${relBtn.href}" target="_blank" rel="noopener">Release 页面</a> 查看详情。</div>`;
+        notes.innerHTML = html;
 
-        // 若存在资产，顺带更新主按钮链接（以防文件名变更）
-        if (Array.isArray(data.assets) && data.assets.length) {
-          const apk = data.assets.find(a => /(\.apk)$/i.test(a.name));
-          if (apk && apk.browser_download_url) {
-            document.getElementById("dl").href = apk.browser_download_url;
-          }
+        // 解析 SHA256
+        const sha = extractSHA(body);
+        if (sha) {
+          shaEl.textContent = sha;
+        } else {
+          shaEl.textContent = "尚未提供";
         }
       } catch (e) {
-        target.innerHTML = `<div class="item">无法读取 Release 信息。请前往 <a href="${FALLBACK_URL}" target="_blank" rel="noopener">GitHub Release</a> 查看。</div>`;
-        pub.textContent = "—";
+        // 故障回退：指向 Releases 列表
+        verEl.textContent = FORCE_TAG || "—";
+        pubEl.textContent = "—";
+        document.getElementById("dl").href = `https://github.com/${OWNER}/${REPO}/releases`;
+        document.getElementById("dl").textContent = "前往 Releases 下载";
+        document.getElementById("rel").href = `https://github.com/${OWNER}/${REPO}/releases`;
+        document.getElementById("notes").innerHTML = `<div class="item">无法读取 Release 信息（${e.message}）。请前往 <a href="https://github.com/${OWNER}/${REPO}/releases" target="_blank" rel="noopener">Releases</a> 查看。</div>`;
+        document.getElementById("sha").textContent = "—";
+        document.getElementById("fname").textContent = "—";
       }
     }
-    loadReleaseNotes();
+
+    loadRelease();
   </script>
 </body>
 </html>
