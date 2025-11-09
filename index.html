@@ -90,12 +90,8 @@
         </div>
 
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <a id="dl" class="btn" href="#" rel="noopener" download>
-            📥 立即下载 APK
-          </a>
-          <a id="rel" class="btn ghost" href="#" target="_blank" rel="noopener">
-            🧾 查看 Release
-          </a>
+          <a id="dl" class="btn" href="#" rel="noopener" download>📥 立即下载 APK</a>
+          <a id="rel" class="btn ghost" href="#" target="_blank" rel="noopener">🧾 查看 Release</a>
         </div>
       </div>
 
@@ -128,7 +124,7 @@
     const OWNER = "unknownparticles";
     const REPO = "fitness_tracker_app";
 
-    // 支持通过 URL 强制指定 tag，如：?tag=v1.0.1
+    // 支持通过 URL 指定 tag，如：?tag=v1.0.1
     const params = new URLSearchParams(location.search);
     const FORCE_TAG = params.get("tag");
 
@@ -145,7 +141,7 @@
     // 复制 SHA256
     document.getElementById("copyBtn").addEventListener("click", async () => {
       const shaText = document.getElementById("sha").textContent.trim();
-      if (!shaText || shaText === "尚未提供") return;
+      if (!shaText || shaText === "尚未提供" || shaText === "—") return;
       try {
         await navigator.clipboard.writeText(shaText);
         const btn = document.getElementById("copyBtn");
@@ -154,14 +150,29 @@
       } catch (_) {}
     });
 
-    // 解析 Release body 中的 sha256: xxxxx
-    function extractSHA(body) {
-      if (!body) return null;
-      const m = body.match(/sha256\s*:\s*([a-f0-9]{64})/i);
-      return m ? m[1] : null;
+    // 从任意文本提取 SHA256（兼容多种写法与中英文冒号）
+    function extractSHAFromText(txt) {
+      if (!txt) return null;
+      // 1) 带前缀（sha256 / sha-256 / SHA256），冒号可为 : 或 ：，也可用 =
+      const withPrefix = txt.match(/sha\s*-?\s*256\s*[:：=]\s*([a-f0-9]{64})/i);
+      if (withPrefix) return withPrefix[1];
+      // 2) 纯 64 位 hex（独立一串，不紧挨着字母数字）
+      const pureHex = txt.match(/(^|[^a-f0-9])([a-f0-9]{64})(?![a-f0-9])/i);
+      if (pureHex) return pureHex[2];
+      return null;
     }
 
-    // 优先选择 app-release.apk；否则选择第一个 .apk
+    // 从 assets 的 label / name 兜底提取 SHA256
+    function extractSHAFromAssets(assets) {
+      if (!Array.isArray(assets)) return null;
+      for (const a of assets) {
+        const cand = extractSHAFromText((a && (a.label || a.name)) || "");
+        if (cand) return cand;
+      }
+      return null;
+    }
+
+    // 选择 APK：优先 app-release.apk，否则第一个 .apk
     function pickApk(assets) {
       if (!Array.isArray(assets)) return null;
       const exact = assets.find(a => a && a.name && a.name.toLowerCase() === "app-release.apk" && /\.apk$/i.test(a.name));
@@ -187,10 +198,8 @@
       try {
         let data;
         if (FORCE_TAG) {
-          // 指定 tag
           data = await fetchJson(`https://api.github.com/repos/${OWNER}/${REPO}/releases/tags/${encodeURIComponent(FORCE_TAG)}`);
         } else {
-          // 最新稳定版（非 draft/prerelease）
           data = await fetchJson(`https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`);
         }
 
@@ -211,8 +220,7 @@
           dlBtn.href = apk.browser_download_url;
           fnameEl.textContent = apk.name || "app-release.apk";
         } else {
-          // 没找到 apk，回退到 release 页面
-          dlBtn.href = data.html_url;
+          dlBtn.href = data.html_url || `https://github.com/${OWNER}/${REPO}/releases`;
           dlBtn.textContent = "前往 Release 下载";
           fnameEl.textContent = "—";
         }
@@ -227,23 +235,22 @@
           : `<div class="item">暂无说明。可前往 <a href="${relBtn.href}" target="_blank" rel="noopener">Release 页面</a> 查看详情。</div>`;
         notes.innerHTML = html;
 
-        // 解析 SHA256
-        const sha = extractSHA(body);
-        if (sha) {
-          shaEl.textContent = sha;
-        } else {
-          shaEl.textContent = "尚未提供";
-        }
+        // 提取 SHA：先 body → 再 assets → 再所选 apk 的 label/name
+        let sha = extractSHAFromText(body);
+        if (!sha) sha = extractSHAFromAssets(data.assets);
+        if (!sha && apk) sha = extractSHAFromText((apk.label || apk.name || ""));
+        shaEl.textContent = sha || "尚未提供";
+
       } catch (e) {
         // 故障回退：指向 Releases 列表
         verEl.textContent = FORCE_TAG || "—";
         pubEl.textContent = "—";
-        document.getElementById("dl").href = `https://github.com/${OWNER}/${REPO}/releases`;
-        document.getElementById("dl").textContent = "前往 Releases 下载";
-        document.getElementById("rel").href = `https://github.com/${OWNER}/${REPO}/releases`;
-        document.getElementById("notes").innerHTML = `<div class="item">无法读取 Release 信息（${e.message}）。请前往 <a href="https://github.com/${OWNER}/${REPO}/releases" target="_blank" rel="noopener">Releases</a> 查看。</div>`;
-        document.getElementById("sha").textContent = "—";
-        document.getElementById("fname").textContent = "—";
+        dlBtn.href = `https://github.com/${OWNER}/${REPO}/releases`;
+        dlBtn.textContent = "前往 Releases 下载";
+        relBtn.href = `https://github.com/${OWNER}/${REPO}/releases`;
+        notes.innerHTML = `<div class="item">无法读取 Release 信息（${e.message}）。请前往 <a href="https://github.com/${OWNER}/${REPO}/releases" target="_blank" rel="noopener">Releases</a> 查看。</div>`;
+        shaEl.textContent = "—";
+        fnameEl.textContent = "—";
       }
     }
 
