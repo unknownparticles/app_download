@@ -90,7 +90,7 @@
         </div>
 
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <a id="dl" class="btn" href="#" rel="noopener" target="_blank">📥 立即下载（GitCode）</a>
+          <a id="dl"  class="btn"       href="#" rel="noopener" target="_blank">📥 立即下载（GitCode）</a>
           <a id="rel" class="btn ghost" href="#" target="_blank" rel="noopener">🧾 查看 Release（GitCode）</a>
           <a id="alt" class="btn ghost" href="#" target="_blank" rel="noopener" style="display:none;">🔗 备用下载（GitHub）</a>
         </div>
@@ -152,7 +152,7 @@
       } catch (_) {}
     });
 
-    // 从任意文本提取 SHA256（兼容多种写法与中英文冒号）
+    // 提取 SHA256
     function extractSHAFromText(txt) {
       if (!txt) return null;
       const withPrefix = txt.match(/sha\s*-?\s*256\s*[:：=]\s*([a-f0-9]{64})/i);
@@ -194,7 +194,7 @@
       try {
         let data;
         if (FORCE_TAG) {
-          // 指定版本：用 GitHub API 拉对应 tag 的元数据（仅用于展示/备用直链），下载跳 GitCode
+          // 指定版本：用 GitHub API 拉该 tag 的元数据（展示用）
           data = await fetchJson(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/releases/tags/${encodeURIComponent(FORCE_TAG)}`);
         } else {
           // 最新稳定版
@@ -203,29 +203,34 @@
 
         const tag = data.tag_name || FORCE_TAG || "latest";
 
-        // GitCode 发布页链接（主按钮与“查看 Release”）
+        // 资产与文件名
+        const apk = pickApk(data.assets || []);
+        const apkName = (apk && apk.name) ? apk.name : "app-release.apk";
+
+        // ✅ 主按钮：GitCode 直链下载
+        const gitcodeDirect = `${GITCODE_BASE}/releases/download/${encodeURIComponent(tag)}/${encodeURIComponent(apkName)}`;
+        dlBtn.href = gitcodeDirect;
+
+        // “查看 Release”：GitCode 版本页
         const gitcodeReleasePage = `${GITCODE_BASE}/releases/${encodeURIComponent(tag)}`;
-        dlBtn.href  = gitcodeReleasePage;
         relBtn.href = gitcodeReleasePage;
 
-        // 版本号/日期
+        // 备用下载（GitHub 直链）：仅当 GitHub 资产存在时显示
+        if (apk && apk.browser_download_url) {
+          altBtn.href = apk.browser_download_url;
+          altBtn.style.display = "inline-flex";
+        } else {
+          altBtn.style.display = "none";
+        }
+
+        // 版本号/日期/文件名
         verEl.textContent = tag;
+        fnameEl.textContent = apkName;
         if (data.published_at) {
           const d = new Date(data.published_at);
           pubEl.textContent = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
         } else {
           pubEl.textContent = "—";
-        }
-
-        // 备用下载（GitHub 直链）
-        const apk = pickApk(data.assets || []);
-        if (apk && apk.browser_download_url) {
-          altBtn.href = apk.browser_download_url;
-          altBtn.style.display = "inline-flex";
-          fnameEl.textContent = apk.name || "app-release.apk";
-        } else {
-          altBtn.style.display = "none";
-          fnameEl.textContent = "—";
         }
 
         // 版本说明（取 GitHub Release body）
@@ -235,21 +240,24 @@
           : `<div class="item">暂无说明。也可前往 <a href="${gitcodeReleasePage}" target="_blank" rel="noopener">GitCode 发布页</a> 查看。</div>`;
         notes.innerHTML = html;
 
-        // SHA 提取（先 body → assets → apknames/labels）
+        // SHA 提取（body → assets → apknames/labels）
         let sha = extractSHAFromText(body);
         if (!sha) sha = extractSHAFromAssets(data.assets);
         if (!sha && apk) sha = extractSHAFromText((apk.label || apk.name || ""));
         shaEl.textContent = sha || "尚未提供";
+
       } catch (e) {
-        // 兜底：如果连 GitHub API 都拿不到，且你提供了 tag 参数，则至少把 GitCode 按钮指到该 tag
+        // 兜底：如果 GitHub API 不可用
         const tag = FORCE_TAG || "latest";
         const gitcodeReleasePage = `${GITCODE_BASE}/releases/${encodeURIComponent(tag)}`;
+        const gitcodeDirect = `${GITCODE_BASE}/releases/download/${encodeURIComponent(tag)}/app-release.apk`;
+
         document.getElementById("ver").textContent = tag;
-        document.getElementById("dl").href  = gitcodeReleasePage;
+        document.getElementById("dl").href  = gitcodeDirect;
         document.getElementById("rel").href = gitcodeReleasePage;
-        document.getElementById("notes").innerHTML = `<div class="item">无法读取 GitHub Release 信息（${e.message}）。已为你切到 GitCode 发布页：<a href="${gitcodeReleasePage}" target="_blank" rel="noopener">${gitcodeReleasePage}</a></div>`;
+        document.getElementById("notes").innerHTML = `<div class="item">无法读取 GitHub Release 信息（${e.message}）。已切到 GitCode：<a href="${gitcodeReleasePage}" target="_blank" rel="noopener">${gitcodeReleasePage}</a></div>`;
         document.getElementById("sha").textContent = "—";
-        document.getElementById("fname").textContent = "—";
+        document.getElementById("fname").textContent = "app-release.apk";
         document.getElementById("alt").style.display = "none";
       }
     }
