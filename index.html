@@ -90,9 +90,8 @@
         </div>
 
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <a id="dl"  class="btn"       href="#" rel="noopener" target="_blank">📥 立即下载（GitCode）</a>
-          <a id="rel" class="btn ghost" href="#" target="_blank" rel="noopener">🧾 查看 Release（GitCode）</a>
-          <a id="alt" class="btn ghost" href="#" target="_blank" rel="noopener" style="display:none;">🔗 备用下载（GitHub）</a>
+          <a id="dl"  class="btn"       href="#" rel="noopener">📥 立即下载（GitHub 直链）</a>
+          <a id="rel" class="btn ghost" href="#" target="_blank" rel="noopener">🧾 查看 Release（GitHub）</a>
         </div>
       </div>
 
@@ -110,7 +109,7 @@
       <div class="section">
         <h2>📝 版本说明</h2>
         <div id="notes" class="changelog">
-          <div class="item">正在读取版本信息…</div>
+          <div class="item">正在读取 GitHub Release 信息…</div>
         </div>
       </div>
     </div>
@@ -121,20 +120,17 @@
   </div>
 
   <script>
-    // ========= 基本配置 =========
-    const GH_OWNER = "unknownparticles";
-    const GH_REPO  = "fitness_tracker_app";
-    const GITCODE_BASE = "https://gitcode.com/particles/fitness_tracker_app";
-
-    // 支持通过 URL 指定 tag，如：?tag=v1.0.1
+    const OWNER = "unknownparticles";
+    const REPO  = "fitness_tracker_app";
     const params = new URLSearchParams(location.search);
     const FORCE_TAG = params.get("tag");
 
-    // iOS 提示
+    // iOS APK 提示
     (function(){
       const ua = navigator.userAgent || "";
-      const isIOS = /iPhone|iPad|iPod/i.test(ua);
-      if (isIOS) document.getElementById("iosWarn").style.display = "block";
+      if (/iPhone|iPad|iPod/i.test(ua)) {
+        document.getElementById("iosWarn").style.display = "block";
+      }
     })();
 
     // 年份
@@ -142,17 +138,17 @@
 
     // 复制 SHA256
     document.getElementById("copyBtn").addEventListener("click", async () => {
-      const shaText = document.getElementById("sha").textContent.trim();
-      if (!shaText || shaText === "尚未提供" || shaText === "—") return;
+      const t = document.getElementById("sha").textContent.trim();
+      if (!t || t === "尚未提供" || t === "—") return;
       try {
-        await navigator.clipboard.writeText(shaText);
+        await navigator.clipboard.writeText(t);
         const btn = document.getElementById("copyBtn");
         btn.textContent = "已复制 ✓";
         setTimeout(() => (btn.textContent = "复制"), 1600);
       } catch (_) {}
     });
 
-    // 提取 SHA256
+    // 提取 SHA256（兼容 sha256: / sha-256: / SHA256= / 中英文冒号 / 纯64位hex）
     function extractSHAFromText(txt) {
       if (!txt) return null;
       const withPrefix = txt.match(/sha\s*-?\s*256\s*[:：=]\s*([a-f0-9]{64})/i);
@@ -186,7 +182,6 @@
       const pubEl   = document.getElementById("pub");
       const dlBtn   = document.getElementById("dl");
       const relBtn  = document.getElementById("rel");
-      const altBtn  = document.getElementById("alt");
       const notes   = document.getElementById("notes");
       const shaEl   = document.getElementById("sha");
       const fnameEl = document.getElementById("fname");
@@ -194,38 +189,15 @@
       try {
         let data;
         if (FORCE_TAG) {
-          // 指定版本：用 GitHub API 拉该 tag 的元数据（展示用）
-          data = await fetchJson(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/releases/tags/${encodeURIComponent(FORCE_TAG)}`);
+          data = await fetchJson(`https://api.github.com/repos/${OWNER}/${REPO}/releases/tags/${encodeURIComponent(FORCE_TAG)}`);
         } else {
-          // 最新稳定版
-          data = await fetchJson(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/releases/latest`);
+          data = await fetchJson(`https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`);
         }
 
-        const tag = data.tag_name || FORCE_TAG || "latest";
-
-        // 资产与文件名
-        const apk = pickApk(data.assets || []);
-        const apkName = (apk && apk.name) ? apk.name : "app-release.apk";
-
-        // ✅ 主按钮：GitCode 直链下载
-        const gitcodeDirect = `${GITCODE_BASE}/releases/download/${encodeURIComponent(tag)}/${encodeURIComponent(apkName)}`;
-        dlBtn.href = gitcodeDirect;
-
-        // “查看 Release”：GitCode 版本页
-        const gitcodeReleasePage = `${GITCODE_BASE}/releases/${encodeURIComponent(tag)}`;
-        relBtn.href = gitcodeReleasePage;
-
-        // 备用下载（GitHub 直链）：仅当 GitHub 资产存在时显示
-        if (apk && apk.browser_download_url) {
-          altBtn.href = apk.browser_download_url;
-          altBtn.style.display = "inline-flex";
-        } else {
-          altBtn.style.display = "none";
-        }
-
-        // 版本号/日期/文件名
+        const tag = data.tag_name || FORCE_TAG || "—";
         verEl.textContent = tag;
-        fnameEl.textContent = apkName;
+
+        // 发布日期
         if (data.published_at) {
           const d = new Date(data.published_at);
           pubEl.textContent = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -233,32 +205,42 @@
           pubEl.textContent = "—";
         }
 
-        // 版本说明（取 GitHub Release body）
-        const body = (data.body || "").trim();
-        const html = body
-          ? body.split(/\n{2,}/).map(p => `<div class="item">${p.replace(/\n/g,"<br>")}</div>`).join("")
-          : `<div class="item">暂无说明。也可前往 <a href="${gitcodeReleasePage}" target="_blank" rel="noopener">GitCode 发布页</a> 查看。</div>`;
-        notes.innerHTML = html;
+        // 资产选择（APK）
+        const apk = pickApk(data.assets || []);
+        if (apk && apk.browser_download_url) {
+          dlBtn.href = apk.browser_download_url;          // GitHub 直链下载
+          relBtn.href = data.html_url || `https://github.com/${OWNER}/${REPO}/releases/tag/${encodeURIComponent(tag)}`;
+          fnameEl.textContent = apk.name || "app-release.apk";
+        } else {
+          // 无资产则退回 release 页面
+          dlBtn.href = data.html_url || `https://github.com/${OWNER}/${REPO}/releases`;
+          dlBtn.textContent = "🧾 前往 Release 页面下载";
+          relBtn.href = dlBtn.href;
+          fnameEl.textContent = "—";
+        }
 
-        // SHA 提取（body → assets → apknames/labels）
+        // 版本说明
+        const body = (data.body || "").trim();
+        notes.innerHTML = body
+          ? body.split(/\n{2,}/).map(p => `<div class="item">${p.replace(/\n/g,"<br>")}</div>`).join("")
+          : `<div class="item">暂无说明。可前往 <a href="${relBtn.href}" target="_blank" rel="noopener">Release 页面</a> 查看详情。</div>`;
+
+        // SHA 提取（body → assets → apk label/name）
         let sha = extractSHAFromText(body);
         if (!sha) sha = extractSHAFromAssets(data.assets);
         if (!sha && apk) sha = extractSHAFromText((apk.label || apk.name || ""));
         shaEl.textContent = sha || "尚未提供";
 
       } catch (e) {
-        // 兜底：如果 GitHub API 不可用
-        const tag = FORCE_TAG || "latest";
-        const gitcodeReleasePage = `${GITCODE_BASE}/releases/${encodeURIComponent(tag)}`;
-        const gitcodeDirect = `${GITCODE_BASE}/releases/download/${encodeURIComponent(tag)}/app-release.apk`;
-
-        document.getElementById("ver").textContent = tag;
-        document.getElementById("dl").href  = gitcodeDirect;
-        document.getElementById("rel").href = gitcodeReleasePage;
-        document.getElementById("notes").innerHTML = `<div class="item">无法读取 GitHub Release 信息（${e.message}）。已切到 GitCode：<a href="${gitcodeReleasePage}" target="_blank" rel="noopener">${gitcodeReleasePage}</a></div>`;
+        // 兜底：GitHub API 不可用
+        const list = `https://github.com/${OWNER}/${REPO}/releases`;
+        document.getElementById("ver").textContent = FORCE_TAG || "—";
+        document.getElementById("dl").href  = list;
+        document.getElementById("dl").textContent = "🧾 前往 Releases 页面下载";
+        document.getElementById("rel").href = list;
+        document.getElementById("notes").innerHTML = `<div class="item">无法读取 GitHub Release（${e.message}）。请前往 <a href="${list}" target="_blank" rel="noopener">Releases</a> 查看。</div>`;
         document.getElementById("sha").textContent = "—";
-        document.getElementById("fname").textContent = "app-release.apk";
-        document.getElementById("alt").style.display = "none";
+        document.getElementById("fname").textContent = "—";
       }
     }
 
